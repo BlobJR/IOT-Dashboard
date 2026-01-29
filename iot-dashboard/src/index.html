@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Dashboard - React</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body, #root {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .app {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            background: #0a0e27;
+        }
+
+        .animated-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .dashboard {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            position: relative;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: rgba(15, 20, 50, 0.85);
+            border-radius: 25px;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(0, 255, 136, 0.4);
+            box-shadow: 0 0 60px rgba(0, 255, 136, 0.25), inset 0 0 40px rgba(0, 255, 136, 0.1);
+            animation: slideIn 0.8s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.85) translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #00ff88 0%, #00ccff 100%);
+            color: #0a0e27;
+            padding: 50px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.15) 50%, transparent 70%);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translate(-100%, -100%) rotate(45deg);
+            }
+            100% {
+                transform: translate(100%, 100%) rotate(45deg);
+            }
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            font-weight: 800;
+            position: relative;
+            z-index: 2;
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% {
+                text-shadow: 0 0 15px rgba(10, 14, 39, 0.3);
+            }
+            50% {
+                text-shadow: 0 0 30px rgba(10, 14, 39, 0.5);
+            }
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.95;
+            font-weight: 400;
+            position: relative;
+            z-index: 2;
+            letter-spacing: 2px;
+        }
+
+        .content {
+            padding: 50px 30px;
+        }
+
+        .display-section {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeIn 1s ease-out 0.3s both;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status-indicator {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-bottom: 25px;
+            animation: pulse-indicator 1.5s ease-in-out infinite;
+            border: 3px solid rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 15px #ffc107;
+        }
+
+        .status-indicator.connected {
+            background-color: #00ff88;
+            box-shadow: 0 0 25px #00ff88, 0 0 50px rgba(0, 255, 136, 0.6);
+            animation: pulse-connected 1.5s ease-in-out infinite;
+        }
+
+        .status-indicator.disconnected {
+            background-color: #ff3333;
+            box-shadow: 0 0 25px #ff3333;
+            animation: pulse-disconnected 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-indicator {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.4;
+                transform: scale(0.7);
+            }
+        }
+
+        @keyframes pulse-connected {
+            0%, 100% {
+                box-shadow: 0 0 25px #00ff88;
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 40px #00ff88, 0 0 60px rgba(0, 255, 136, 0.8);
+                transform: scale(1.15);
+            }
+        }
+
+        @keyframes pulse-disconnected {
+            0%, 100% {
+                box-shadow: 0 0 15px #ff3333;
+            }
+            50% {
+                box-shadow: 0 0 35px #ff3333;
+            }
+        }
+
+        .display-section h2 {
+            color: #00ff88;
+            font-size: 1.3em;
+            margin-bottom: 30px;
+            font-weight: 600;
+            text-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+            letter-spacing: 1.5px;
+        }
+
+        .number-display {
+            font-size: 5.5em;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00ff88 0%, #00ccff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 40px 0;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 8px;
+            animation: number-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes number-glow {
+            0%, 100% {
+                filter: drop-shadow(0 0 10px rgba(0, 255, 136, 0.3)) drop-shadow(0 0 20px rgba(0, 204, 255, 0.2));
+            }
+            50% {
+                filter: drop-shadow(0 0 25px rgba(0, 255, 136, 0.6)) drop-shadow(0 0 50px rgba(0, 204, 255, 0.5));
+            }
+        }
+
+        .last-update {
+            color: #00ccff;
+            font-size: 1em;
+            margin-top: 20px;
+            text-shadow: 0 0 8px rgba(0, 204, 255, 0.6);
+            animation: fade-inout 2.5s ease-in-out infinite;
+        }
+
+        @keyframes fade-inout {
+            0%, 100% {
+                opacity: 0.7;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .stats-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .stat-card {
+            background: rgba(0, 255, 136, 0.06);
+            padding: 28px;
+            border-radius: 15px;
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            border-left: 4px solid #00ff88;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            animation: slide-up 0.8s ease-out;
+        }
+
+        @keyframes slide-up {
+            from {
+                opacity: 0;
+                transform: translateY(25px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0, 255, 136, 0.25), inset 0 0 25px rgba(0, 255, 136, 0.12);
+            border-color: rgba(0, 255, 136, 0.7);
+            background: rgba(0, 255, 136, 0.12);
+        }
+
+        .stat-card h3 {
+            color: #00ccff;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px rgba(0, 204, 255, 0.4);
+        }
+
+        .status-text {
+            font-size: 1.9em;
+            color: #00ff88;
+            font-weight: 800;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+            animation: text-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes text-glow {
+            0%, 100% {
+                text-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+            }
+            50% {
+                text-shadow: 0 0 35px rgba(0, 255, 136, 0.9), 0 0 50px rgba(0, 204, 255, 0.4);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.2em;
+            }
+
+            .number-display {
+                font-size: 4em;
+            }
+
+            .stats-section {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                border-radius: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Animated Background Component
+        const AnimatedBackground = () => {
+            const containerRef = useRef(null);
+
+            useEffect(() => {
+                if (!containerRef.current) return;
+
+                // Scene setup
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(
+                    75,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    1000
+                );
+                camera.position.z = 50;
+
+                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+                containerRef.current.appendChild(renderer.domElement);
+
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x00ff88, 0.4);
+                scene.add(ambientLight);
+
+                const pointLight = new THREE.PointLight(0x00ccff, 1.2);
+                pointLight.position.set(50, 50, 50);
+                scene.add(pointLight);
+
+                // Create particles
+                const particleCount = 300;
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(particleCount * 3);
+                const velocities = new Float32Array(particleCount * 3);
+
+                for (let i = 0; i < particleCount * 3; i += 3) {
+                    positions[i] = (Math.random() - 0.5) * 200;
+                    positions[i + 1] = (Math.random() - 0.5) * 200;
+                    positions[i + 2] = (Math.random() - 0.5) * 200;
+
+                    velocities[i] = (Math.random() - 0.5) * 0.8;
+                    velocities[i + 1] = (Math.random() - 0.5) * 0.8;
+                    velocities[i + 2] = (Math.random() - 0.5) * 0.8;
+                }
+
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.userData.velocities = velocities;
+
+                const material = new THREE.PointsMaterial({
+                    color: 0x00ff88,
+                    size: 0.7,
+                    sizeAttenuation: true,
+                    transparent: true,
+                    opacity: 0.9,
+                });
+
+                const particles = new THREE.Points(geometry, material);
+                scene.add(particles);
+
+                // Create floating cubes
+                for (let i = 0; i < 8; i++) {
+                    const geom = new THREE.BoxGeometry(4, 4, 4);
+                    const mat = new THREE.MeshStandardMaterial({
+                        color: new THREE.Color().setHSL(i / 8, 0.8, 0.5),
+                        emissive: new THREE.Color().setHSL(i / 8, 0.6, 0.3),
+                        metalness: 0.7,
+                        roughness: 0.2,
+                    });
+
+                    const cube = new THREE.Mesh(geom, mat);
+                    cube.position.set(
+                        (Math.random() - 0.5) * 150,
+                        (Math.random() - 0.5) * 150,
+                        (Math.random() - 0.5) * 150
+                    );
+
+                    cube.userData.rotationSpeed = {
+                        x: (Math.random() - 0.5) * 0.015,
+                        y: (Math.random() - 0.5) * 0.015,
+                        z: (Math.random() - 0.5) * 0.015,
+                    };
+
+                    scene.add(cube);
+                }
+
+                // Animation loop
+                const animate = () => {
+                    requestAnimationFrame(animate);
+
+                    // Animate particles
+                    const positions = particles.geometry.attributes.position.array;
+                    const velocities = geometry.userData.velocities;
+
+                    for (let i = 0; i < positions.length; i += 3) {
+                        positions[i] += velocities[i];
+                        positions[i + 1] += velocities[i + 1];
+                        positions[i + 2] += velocities[i + 2];
+
+                        if (Math.abs(positions[i]) > 100) velocities[i] *= -1;
+                        if (Math.abs(positions[i + 1]) > 100) velocities[i + 1] *= -1;
+                        if (Math.abs(positions[i + 2]) > 100) velocities[i + 2] *= -1;
+                    }
+
+                    particles.geometry.attributes.position.needsUpdate = true;
+
+                    // Animate cubes
+                    scene.children.forEach((child) => {
+                        if (child instanceof THREE.Mesh && child.userData.rotationSpeed) {
+                            child.rotation.x += child.userData.rotationSpeed.x;
+                            child.rotation.y += child.userData.rotationSpeed.y;
+                            child.rotation.z += child.userData.rotationSpeed.z;
+                        }
+                    });
+
+                    // Camera movement
+                    const time = Date.now() * 0.0001;
+                    camera.position.x = Math.sin(time) * 40;
+                    camera.position.y = Math.cos(time * 0.5) * 30;
+
+                    renderer.render(scene, camera);
+                };
+
+                animate();
+
+                // Handle resize
+                const handleResize = () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                };
+
+                window.addEventListener('resize', handleResize);
+
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
+                        containerRef.current.removeChild(renderer.domElement);
+                    }
+                    geometry.dispose();
+                    material.dispose();
+                    renderer.dispose();
+                };
+            }, []);
+
+            return <div ref={containerRef} className="animated-background" />;
+        };
+
+        // Dashboard Component
+        const Dashboard = () => {
+            const [number, setNumber] = useState('--');
+            const [dataCount, setDataCount] = useState(0);
+            const [isConnected, setIsConnected] = useState(false);
+            const [lastUpdate, setLastUpdate] = useState('Waiting...');
+
+            useEffect(() => {
+                const fetchData = async () => {
+                    try {
+                        const response = await fetch('http://localhost:5000/iot-data');
+                        if (response.ok) {
+                            const data = await response.json();
+                            setNumber(data.number);
+                            setDataCount((prev) => prev + 1);
+                            setIsConnected(true);
+                            setLastUpdate(new Date().toLocaleTimeString());
+                        }
+                    } catch (error) {
+                        setIsConnected(false);
+                        console.error('Error fetching data:', error);
+                    }
+                };
+
+                fetchData();
+                const interval = setInterval(fetchData, 3000);
+
+                return () => clearInterval(interval);
+            }, []);
+
+            return (
+                <div className="dashboard">
+                    <div className="container">
+                        <header className="header">
+                            <h1>📊 IoT Dashboard</h1>
+                            <p className="subtitle">Real-time Data Display</p>
+                        </header>
+
+                        <main className="content">
+                            <section className="display-section">
+                                <div className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}></div>
+                                <h2>Last Received Value</h2>
+                                <div className="number-display">{number}</div>
+                                <p className="last-update">Last update: {lastUpdate}</p>
+                            </section>
+
+                            <section className="stats-section">
+                                <div className="stat-card">
+                                    <h3>Connection Status</h3>
+                                    <p className="status-text">{isConnected ? '✓ Connected' : '✗ Disconnected'}</p>
+                                </div>
+                                <div className="stat-card">
+                                    <h3>Data Points Received</h3>
+                                    <p className="status-text">{dataCount}</p>
+                                </div>
+                            </section>
+                        </main>
+                    </div>
+                </div>
+            );
+        };
+
+        // Main App Component
+        const App = () => {
+            return (
+                <div className="app">
+                    <AnimatedBackground />
+                    <Dashboard />
+                </div>
+            );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
