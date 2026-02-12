@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { getSensorData, resetParkingCount } from '../api'; 
 import './Dashboard.css';
 
+/**
+ * Dashboard component for visualizing real-time parking data.
+ * Displays occupancy statistics and provides an administrative interface for manual resets.
+ */
 const Dashboard = () => {
   const [parkingData, setParkingData] = useState({
     placesRestantes: '--',
@@ -10,12 +14,15 @@ const Dashboard = () => {
   });
   const [lastUpdate, setLastUpdate] = useState('Waiting...');
 
-  // Admin Modal State
+  // State management for the administrative modal
   const [showAdmin, setShowAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [targetCount, setTargetCount] = useState('');
-  const [adminStatus, setAdminStatus] = useState(null); // { type: 'success' | 'error', msg: '' }
+  const [adminStatus, setAdminStatus] = useState(null);
 
+  /**
+   * Fetches the latest data from the backend API.
+   */
   const refreshData = async () => {
     try {
       const data = await getSensorData();
@@ -28,15 +35,19 @@ const Dashboard = () => {
     }
   };
 
+  // Set up data polling on mount
   useEffect(() => {
     refreshData();
     const interval = setInterval(refreshData, 3000); 
     return () => clearInterval(interval);
   }, []);
 
+  /**
+   * Processes the administrative reset request.
+   */
   const handleAdminSubmit = async (e) => {
       e.preventDefault();
-      setAdminStatus({ type: 'loading', msg: 'Vérification...' });
+      setAdminStatus({ type: 'loading', msg: 'Verifying...' });
       
       const result = await resetParkingCount(parseInt(targetCount, 10), adminPassword);
       
@@ -47,7 +58,7 @@ const Dashboard = () => {
               setAdminStatus(null);
               setAdminPassword('');
               setTargetCount('');
-              refreshData(); // Refresh to show new value
+              refreshData(); // Immediate refresh to reflect manual override
           }, 1500);
       } else {
           setAdminStatus({ type: 'error', msg: result.message });
@@ -59,27 +70,27 @@ const Dashboard = () => {
       <div className="container">
         <header className="header">
           <h1>IOT CONTROL</h1>
-          <p className="subtitle">Système de Monitoring</p>
+          <p className="subtitle">Monitoring System</p>
         </header>
 
         <main className="content">
           <section className="display-section">
             <div className={`status-indicator ${parkingData.isConnected ? 'connected' : 'disconnected'}`}></div>
             
-            <h2>PLACES RESTANTES</h2>
+            <h2>REMAINING SPACES</h2>
             <div className="number-display">
               {parkingData.placesRestantes}
             </div>
-            <p className="last-update">Dernière mise à jour: {lastUpdate}</p>
+            <p className="last-update">Last updated: {lastUpdate}</p>
           </section>
 
           <section className="stats-section">
             <div className="stat-card">
-              <h3>PLACES HANDICAPÉES</h3>
+              <h3>HANDICAP SPACES</h3>
               <p className="status-text">{parkingData.placesHandicapeesRestantes}</p>
             </div>
             <div className="stat-card">
-              <h3>ÉTAT</h3>
+              <h3>STATUS</h3>
               <p className="status-text" style={{ color: parkingData.isConnected ? '#00ff88' : '#ff3333' }}>
                 {parkingData.isConnected ? 'ONLINE' : 'OFFLINE'}
               </p>
@@ -87,24 +98,22 @@ const Dashboard = () => {
           </section>
         </main>
 
-        {/* --- SECURE ADMIN BUTTON --- */}
         <div className="admin-footer">
             <button className="admin-toggle" onClick={() => setShowAdmin(true)}>
                 🔒 Admin Reset
             </button>
         </div>
 
-        {/* --- ADMIN MODAL --- */}
         {showAdmin && (
             <div className="modal-overlay">
                 <div className="admin-modal">
                     <button className="close-btn" onClick={() => setShowAdmin(false)}>×</button>
                     <h3>Administration</h3>
-                    <p>Entrez le mot de passe pour forcer le compteur.</p>
+                    <p>Enter administrator credentials to force a counter reset.</p>
                     
                     <form onSubmit={handleAdminSubmit}>
                         <div className="input-group">
-                            <label>Nombre de places :</label>
+                            <label>Target Count:</label>
                             <input 
                                 type="number" 
                                 value={targetCount}
@@ -113,7 +122,7 @@ const Dashboard = () => {
                             />
                         </div>
                         <div className="input-group">
-                            <label>Mot de passe Admin :</label>
+                            <label>Admin Password:</label>
                             <input 
                                 type="password" 
                                 value={adminPassword}
@@ -128,7 +137,7 @@ const Dashboard = () => {
                             </div>
                         )}
 
-                        <button type="submit" className="btn-submit">Valider</button>
+                        <button type="submit" className="btn-submit">Validate</button>
                     </form>
                 </div>
             </div>

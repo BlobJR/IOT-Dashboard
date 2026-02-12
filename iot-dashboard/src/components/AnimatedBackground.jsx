@@ -5,13 +5,17 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass'
 import './AnimatedBackground.css'
 
+/**
+ * A 3D animated background component using Three.js.
+ * Visualizes a stylized IoT parking lot with real-time effects and interactivity.
+ */
 const AnimatedBackground = () => {
   const containerRef = useRef(null)
 
   useEffect(() => {
     if (!containerRef.current) return
 
-    // --- 1. SETUP SCENE ---
+    // Scene setup with fog for depth perception
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0x020205)
     scene.fog = new THREE.FogExp2(0x020205, 0.02)
@@ -27,7 +31,7 @@ const AnimatedBackground = () => {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     containerRef.current.appendChild(renderer.domElement)
 
-    // --- POST-PROCESSING (Bloom) ---
+    // Post-processing pipeline for glow effects
     const renderScene = new RenderPass(scene, camera)
     const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
@@ -41,8 +45,7 @@ const AnimatedBackground = () => {
     composer.addPass(renderScene)
     composer.addPass(bloomPass)
 
-    // --- 2. ENVIRONMENT ---
-    // Reflective Floor
+    // Environmental elements: Floor and Grid system
     const planeGeometry = new THREE.PlaneGeometry(500, 500)
     const planeMaterial = new THREE.MeshStandardMaterial({
       color: 0x050505,
@@ -54,12 +57,11 @@ const AnimatedBackground = () => {
     plane.receiveShadow = true
     scene.add(plane)
 
-    // Grid
     const grid = new THREE.GridHelper(500, 100, 0x0044ff, 0x0a0a0a)
     grid.position.y = 0.01
     scene.add(grid)
 
-    // Lights
+    // Basic lighting configuration
     const ambientLight = new THREE.AmbientLight(0x404040, 2)
     scene.add(ambientLight)
 
@@ -68,12 +70,12 @@ const AnimatedBackground = () => {
     dirLight.castShadow = true
     scene.add(dirLight)
 
-    // --- 3. IOT PARKING ASSETS ---
-
+    /**
+     * Helper to create a stylized vehicle mesh.
+     */
     const createCar = (color, x, z) => {
         const carGroup = new THREE.Group()
 
-        // Body
         const bodyMat = new THREE.MeshPhysicalMaterial({
             color: color,
             metalness: 0.7,
@@ -86,7 +88,6 @@ const AnimatedBackground = () => {
         body.castShadow = true
         carGroup.add(body)
 
-        // Cabin
         const cabin = new THREE.Mesh(
             new THREE.BoxGeometry(1.9, 0.5, 2.5), 
             new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.0, metalness: 0.9 })
@@ -94,7 +95,6 @@ const AnimatedBackground = () => {
         cabin.position.set(0, 1.25, -0.2)
         carGroup.add(cabin)
 
-        // Lights
         const tailLight = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.1, 0.1), new THREE.MeshBasicMaterial({ color: 0xff0000 }))
         tailLight.position.set(0, 0.7, 2.26)
         carGroup.add(tailLight)
@@ -107,18 +107,18 @@ const AnimatedBackground = () => {
         return carGroup
     }
 
-    // CREATE PARKING SPOTS & SENSORS
+    // Initialize parking spots with simulated sensors
     const sensors = [];
     
     for (let i = -2; i <= 2; i++) {
-        const x = i * 7 // Spacing
+        const x = i * 7
         const z = 0
-        const isOccupied = Math.random() > 0.4; // 60% chance occupied
+        const isOccupied = Math.random() > 0.4;
 
-        // 1. Floor Marking
+        // Visual parking spot indicator
         const spotGeo = new THREE.PlaneGeometry(3.5, 7)
         const spotMat = new THREE.MeshBasicMaterial({ 
-            color: isOccupied ? 0xaa0000 : 0x00aa00, // Red if full, Green if free
+            color: isOccupied ? 0xaa0000 : 0x00aa00,
             transparent: true, 
             opacity: 0.1, 
             side: THREE.DoubleSide,
@@ -129,23 +129,21 @@ const AnimatedBackground = () => {
         spot.position.set(x, 0.02, z)
         scene.add(spot)
 
-        // 2. Borders
         const borderGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(3.5, 0.1, 7))
         const borderMat = new THREE.LineBasicMaterial({ color: isOccupied ? 0xff0000 : 0x00ff00 })
         const border = new THREE.LineSegments(borderGeo, borderMat)
         border.position.set(x, 0.02, z)
         scene.add(border)
 
-        // 3. IoT Sensor Node (Floating above)
+        // Simulated IoT sensor hardware representation
         const sensorNodeGeo = new THREE.ConeGeometry(0.3, 0.8, 4);
         const sensorNodeMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: isOccupied ? 0xff0000 : 0x00ff00, emissiveIntensity: 2 });
         const sensorNode = new THREE.Mesh(sensorNodeGeo, sensorNodeMat);
         sensorNode.position.set(x, 5, z);
-        sensorNode.rotation.x = Math.PI; // Point down
+        sensorNode.rotation.x = Math.PI;
         scene.add(sensorNode);
 
-        // 4. Sensor Beam (Light cone)
-        const beamHeight = isOccupied ? 3.5 : 5; // Beam hits car or floor
+        const beamHeight = isOccupied ? 3.5 : 5;
         const beamGeo = new THREE.CylinderGeometry(0.05, 1.5, beamHeight, 32, 1, true);
         const beamMat = new THREE.MeshBasicMaterial({
             color: isOccupied ? 0xff0000 : 0x00ff00,
@@ -159,10 +157,8 @@ const AnimatedBackground = () => {
         beam.position.set(x, 5 - (beamHeight / 2), z);
         scene.add(beam);
 
-        // Store for animation
         sensors.push({ beam, spotMat, originalOpacity: 0.15 });
 
-        // 5. Place Car if occupied
         if (isOccupied) {
             const colors = [0x333333, 0x111111, 0x1a2b4c, 0x555555]
             const color = colors[Math.floor(Math.random() * colors.length)]
@@ -171,8 +167,7 @@ const AnimatedBackground = () => {
         }
     }
 
-    // --- 4. SCANNING EFFECT ---
-    // A digital scanning plane moving across the lot
+    // Scanner animation effect representing data acquisition
     const scannerGeo = new THREE.BoxGeometry(40, 0.05, 0.2);
     const scannerMat = new THREE.MeshBasicMaterial({ 
         color: 0x00ffff, 
@@ -188,7 +183,7 @@ const AnimatedBackground = () => {
     scannerLight.position.set(0, 2, 0);
     scene.add(scannerLight);
 
-    // --- 5. BACKGROUND TRAFFIC (Data Flow) ---
+    // Decorative data flow lines in the background
     const trafficLines = []
     for(let i=0; i<20; i++) {
         const geo = new THREE.BoxGeometry(0.05, 0.05, 3 + Math.random() * 8)
@@ -199,10 +194,9 @@ const AnimatedBackground = () => {
         trafficLines.push({ mesh, speed: 0.2 + Math.random() * 0.5 })
     }
 
-    // --- 6. ANIMATION LOOP ---
     const clock = new THREE.Clock()
     
-    // Mouse Interaction
+    // Mouse interaction handling
     let mouseX = 0;
     let mouseY = 0;
     const handleMouseMove = (e) => {
@@ -211,30 +205,31 @@ const AnimatedBackground = () => {
     };
     window.addEventListener('mousemove', handleMouseMove);
 
+    /**
+     * Primary animation loop for the 3D scene.
+     */
     const animate = () => {
         requestAnimationFrame(animate)
         const time = clock.getElapsedTime();
 
-        // Animate Scanner
+        // Animate scanning plane
         const scanZ = Math.sin(time * 0.5) * 10;
         scanner.position.z = scanZ;
         scannerLight.position.z = scanZ;
-        
-        // Make scanner blink/pulse
         scannerMat.opacity = 0.3 + Math.sin(time * 10) * 0.2;
 
-        // Animate Sensors (Pulse)
+        // Sensor pulsing effects
         sensors.forEach((s, idx) => {
             s.beam.material.opacity = s.originalOpacity + Math.sin(time * 3 + idx) * 0.05;
         });
 
-        // Background Data Flow
+        // Background traffic movement
         trafficLines.forEach(item => {
             item.mesh.position.z += item.speed
             if(item.mesh.position.z > 20) item.mesh.position.z = -60
         })
 
-        // Camera Sway
+        // Interactive camera sway
         const targetX = mouseX * 2;
         const targetY = 14 + mouseY * 1;
         camera.position.x += (targetX - camera.position.x) * 0.05;
@@ -254,6 +249,7 @@ const AnimatedBackground = () => {
     }
     window.addEventListener('resize', handleResize)
 
+    // Cleanup resources on component unmount
     return () => {
         window.removeEventListener('resize', handleResize)
         window.removeEventListener('mousemove', handleMouseMove)
